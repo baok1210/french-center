@@ -2,19 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
+import { isDemoMode, loadDemoEnrollments, addDemoEnrollments, deleteDemoEnrollment, loadDemoClasses, loadDemoStudents } from '@/data/admin-store';
+import type { DemoEnrollment } from '@/data/admin-store';
 import { UserPlus, Users, Trash2, X, Save, AlertCircle, Search, GraduationCap } from 'lucide-react';
-
-interface EnrollmentRecord {
-  id: string;
-  student_id: string;
-  class_id: string;
-  profiles?: { full_name: string; student_code: string };
-  classes?: { title: string; level: string };
-}
 
 export default function AdminEnrollmentsPage() {
   const supabase = createClient();
-  const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([]);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
   const [classes, setClasses] = useState<{ id: string; title: string; level: string }[]>([]);
   const [students, setStudents] = useState<{ id: string; full_name: string; student_code: string }[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -22,10 +16,34 @@ export default function AdminEnrollmentsPage() {
   const [error, setError] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [form, setForm] = useState({ class_id: '', student_ids: [] as string[] });
+  const demo = isDemoMode();
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
+    if (demo) {
+      const demoEnr = loadDemoEnrollments();
+      const demoCls = loadDemoClasses();
+      const demoStuds = loadDemoStudents();
+
+      setClasses(demoCls.map(c => ({ id: c.id, title: c.title, level: c.level })));
+      setStudents(demoStuds.map(s => ({ id: s.id, full_name: s.full_name, student_code: s.student_code || '' })));
+
+      const enriched = demoEnr.map(e => {
+        const cls = demoCls.find(c => c.id === e.class_id);
+        const stud = demoStuds.find(s => s.id === e.student_id);
+        return {
+          id: e.id,
+          class_id: e.class_id,
+          student_id: e.student_id,
+          profiles: stud ? { full_name: stud.full_name, student_code: stud.student_code } : { full_name: 'N/A', student_code: '' },
+          classes: cls ? { title: cls.title, level: cls.level } : { title: 'N/A', level: '' },
+        };
+      });
+      setEnrollments(enriched);
+      return;
+    }
+
     const { data: enr } = await supabase
       .from('enrollments')
       .select('*, profiles!student_id(full_name, student_code), classes!class_id(title, level)')
@@ -48,9 +66,18 @@ export default function AdminEnrollmentsPage() {
     setSaving(true);
     setError('');
 
+    if (demo) {
+      addDemoEnrollments(form.class_id, form.student_ids);
+      setSaving(false);
+      setShowModal(false);
+      setForm({ class_id: '', student_ids: [] });
+      loadData();
+      return;
+    }
+
     const existingIds = enrollments
-      .filter((e) => e.class_id === form.class_id)
-      .map((e) => e.student_id);
+      .filter((e: any) => e.class_id === form.class_id)
+      .map((e: any) => e.student_id);
 
     const newIds = form.student_ids.filter((id) => !existingIds.includes(id));
     if (newIds.length === 0) {
@@ -71,6 +98,11 @@ export default function AdminEnrollmentsPage() {
 
   async function handleRemove(id: string) {
     if (!confirm('Xóa ghi danh này?')) return;
+    if (demo) {
+      deleteDemoEnrollment(id);
+      loadData();
+      return;
+    }
     const { error: err } = await supabase.from('enrollments').delete().eq('id', id);
     if (err) alert('Lỗi: ' + err.message);
     else loadData();
@@ -86,11 +118,11 @@ export default function AdminEnrollmentsPage() {
   }
 
   const filteredEnrollments = filterClass
-    ? enrollments.filter((e) => e.class_id === filterClass)
+    ? enrollments.filter((e: any) => e.class_id === filterClass)
     : enrollments;
 
   const enrolledStudentIds = new Set(
-    filterClass ? enrollments.filter((e) => e.class_id === filterClass).map((e) => e.student_id) : []
+    filterClass ? enrollments.filter((e: any) => e.class_id === filterClass).map((e: any) => e.student_id) : []
   );
 
   return (
@@ -106,7 +138,6 @@ export default function AdminEnrollmentsPage() {
         </button>
       </div>
 
-      {/* Filter */}
       <div className="flex items-center gap-3">
         <label className="text-xs font-medium text-muted-foreground">Xem theo lớp:</label>
         <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
@@ -116,7 +147,6 @@ export default function AdminEnrollmentsPage() {
         </select>
       </div>
 
-      {/* Stats */}
       {filterClass && (
         <div className="rounded-2xl border border-border/50 bg-card p-4">
           <p className="text-sm">
@@ -125,9 +155,8 @@ export default function AdminEnrollmentsPage() {
         </div>
       )}
 
-      {/* Enrollments List */}
       <div className="space-y-3">
-        {filteredEnrollments.map((enr) => (
+        {filteredEnrollments.map((enr: any) => (
           <div key={enr.id}
             className="diffusion-shadow flex items-center justify-between gap-4 rounded-2xl border border-border/50 bg-card p-5">
             <div className="flex items-center gap-4">
@@ -154,7 +183,6 @@ export default function AdminEnrollmentsPage() {
         )}
       </div>
 
-      {/* Add Students Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-border/50 bg-card p-6 shadow-xl">
@@ -174,7 +202,7 @@ export default function AdminEnrollmentsPage() {
                   <option value="">-- Chọn lớp --</option>
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.title} ({c.level}) — Đã có {enrollments.filter((e) => e.class_id === c.id).length} HV
+                      {c.title} ({c.level}) — Đã có {enrollments.filter((e: any) => e.class_id === c.id).length} HV
                     </option>
                   ))}
                 </select>

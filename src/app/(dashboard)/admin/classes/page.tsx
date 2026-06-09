@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
+import { isDemoMode, loadDemoClasses, saveDemoClass, deleteDemoClass, loadDemoTeachers } from '@/data/admin-store';
+import type { DemoClass } from '@/data/admin-store';
 import { Plus, Calendar, Users, Edit3, Trash2, X, Save, AlertCircle } from 'lucide-react';
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -16,6 +18,7 @@ interface ClassRecord {
   is_active: boolean;
   teacher_id: string;
   profiles?: { full_name: string };
+  teacher_name?: string;
 }
 
 export default function AdminClassesPage() {
@@ -35,10 +38,19 @@ export default function AdminClassesPage() {
     teacher_id: '',
     is_active: true,
   });
+  const demo = isDemoMode();
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
+    if (demo) {
+      const demoClasses = loadDemoClasses();
+      const demoTeachers = loadDemoTeachers();
+      setClasses(demoClasses.map(c => ({ ...c, teacher_name: c.teacher_name })));
+      setTeachers(demoTeachers.map(t => ({ id: t.id, full_name: t.full_name })));
+      return;
+    }
+
     const { data: cls } = await supabase
       .from('classes')
       .select('*, profiles!teacher_id(full_name)')
@@ -80,6 +92,26 @@ export default function AdminClassesPage() {
     setSaving(true);
     setError('');
 
+    const teacherName = teachers.find(t => t.id === form.teacher_id)?.full_name || '';
+
+    if (demo) {
+      saveDemoClass({
+        id: editing?.id,
+        title: form.title.trim(),
+        level: form.level,
+        schedule: form.schedule || null,
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
+        is_active: form.is_active,
+        teacher_id: form.teacher_id,
+        teacher_name: teacherName,
+      });
+      setSaving(false);
+      setShowModal(false);
+      loadData();
+      return;
+    }
+
     const payload = {
       title: form.title.trim(),
       level: form.level,
@@ -90,30 +122,39 @@ export default function AdminClassesPage() {
       is_active: form.is_active,
     };
 
+    let err: any;
     if (editing) {
-      const { error: err } = await supabase.from('classes').update(payload).eq('id', editing.id);
-      if (err) setError(err.message);
+      const { error: e } = await supabase.from('classes').update(payload).eq('id', editing.id);
+      err = e;
     } else {
-      const { error: err } = await supabase.from('classes').insert(payload);
-      if (err) setError(err.message);
+      const { error: e } = await supabase.from('classes').insert(payload);
+      err = e;
     }
     setSaving(false);
-    if (!error) {
-      setShowModal(false);
-      loadData();
-    }
+    if (err) { setError(err.message); return; }
+    setShowModal(false);
+    loadData();
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Xóa lớp học này? Hành động này không thể hoàn tác.')) return;
+    if (demo) {
+      deleteDemoClass(id);
+      loadData();
+      return;
+    }
     const { error: err } = await supabase.from('classes').delete().eq('id', id);
     if (err) alert('Lỗi: ' + err.message);
     else loadData();
   }
 
+  function getTeacherName(cls: ClassRecord): string {
+    if (demo) return (cls as any).teacher_name || 'N/A';
+    return cls.profiles?.full_name || 'N/A';
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Lớp học</h2>
@@ -125,7 +166,6 @@ export default function AdminClassesPage() {
         </button>
       </div>
 
-      {/* Class Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {classes.map((cls) => (
           <div key={cls.id} className="diffusion-shadow rounded-2xl border border-border/50 bg-card p-5 transition-all hover:shadow-md">
@@ -156,7 +196,7 @@ export default function AdminClassesPage() {
               )}
               <div className="flex items-center gap-2">
                 <Users className="h-3.5 w-3.5" strokeWidth={1.5} />
-                GV: {cls.profiles?.full_name || 'N/A'}
+                GV: {getTeacherName(cls)}
               </div>
               {!cls.is_active && (
                 <span className="inline-block rounded-lg bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
@@ -177,7 +217,6 @@ export default function AdminClassesPage() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-border/50 bg-card p-6 shadow-xl">

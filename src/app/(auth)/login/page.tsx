@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
-import { LogIn, UserPlus, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 const DEMO_CREDENTIALS = [
   { role: 'Giáo viên', email: 'teacher@demo.com', password: 'demo1234' },
@@ -40,7 +40,7 @@ export default function LoginPage() {
 
   function handleDemo(email: string) {
     localStorage.setItem('demo_user', email);
-    router.push('/dashboard');
+    router.push(email === 'student@demo.com' ? '/knowledge' : '/dashboard');
   }
 
   return (
@@ -53,7 +53,7 @@ export default function LoginPage() {
               FC
             </div>
             <h1 className="text-xl font-semibold tracking-tight">French Center</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Đăng nhập hệ thống đánh giá</p>
+            <p className="mt-1 text-sm text-muted-foreground">Học tiếng Pháp — miễn phí, mọi lúc, mọi nơi</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

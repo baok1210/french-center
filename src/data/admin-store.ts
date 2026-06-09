@@ -1,0 +1,321 @@
+'use client';
+
+const DEMO_CLASSES_KEY = 'demo_classes';
+const DEMO_TEACHERS_KEY = 'demo_teachers';
+const DEMO_STUDENTS_KEY = 'demo_students';
+
+export function isDemoMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!localStorage.getItem('demo_user');
+}
+
+function getStore<T>(key: string): T[] {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+function setStore<T>(key: string, data: T[]) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+/* ==================== CLASSES ==================== */
+
+export interface DemoClass {
+  id: string;
+  title: string;
+  level: string;
+  schedule: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  teacher_id: string;
+  teacher_name: string;
+  created_at: string;
+}
+
+export function loadDemoClasses(): DemoClass[] {
+  return getStore<DemoClass>(DEMO_CLASSES_KEY);
+}
+
+export function saveDemoClass(data: {
+  id?: string;
+  title: string;
+  level: string;
+  schedule?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_active: boolean;
+  teacher_id: string;
+  teacher_name: string;
+}): DemoClass {
+  const list = loadDemoClasses();
+  const now = new Date().toISOString();
+
+  if (data.id) {
+    const idx = list.findIndex(c => c.id === data.id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...data, id: data.id };
+      setStore(DEMO_CLASSES_KEY, list);
+      return list[idx];
+    }
+  }
+
+  const newClass: DemoClass = {
+    id: crypto.randomUUID(),
+    title: data.title,
+    level: data.level,
+    schedule: data.schedule ?? null,
+    start_date: data.start_date ?? null,
+    end_date: data.end_date ?? null,
+    is_active: data.is_active,
+    teacher_id: data.teacher_id,
+    teacher_name: data.teacher_name,
+    created_at: now,
+  };
+  list.unshift(newClass);
+  setStore(DEMO_CLASSES_KEY, list);
+  return newClass;
+}
+
+export function deleteDemoClass(id: string) {
+  setStore(DEMO_CLASSES_KEY, loadDemoClasses().filter(c => c.id !== id));
+}
+
+/* ==================== TEACHERS ==================== */
+
+export interface DemoTeacher {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  student_code: string | null;
+  cefr_current: string;
+  role: string;
+}
+
+const SEED_TEACHERS: DemoTeacher[] = [
+  { id: 'teacher-1', full_name: 'Nguyễn Văn An', email: 'an.nguyen@demo.com', phone: '0901234567', student_code: 'GV001', cefr_current: 'C1', role: 'TeacherTA' },
+  { id: 'teacher-2', full_name: 'Trần Thị Bình', email: 'binh.tran@demo.com', phone: '0902345678', student_code: 'GV002', cefr_current: 'C2', role: 'TeacherTA' },
+  { id: 'teacher-3', full_name: 'Lê Hoàng Cường', email: 'cuong.le@demo.com', phone: '0903456789', student_code: 'GV003', cefr_current: 'C1', role: 'TeacherTA' },
+  { id: 'teacher-4', full_name: 'Phạm Minh Đức', email: 'duc.pham@demo.com', phone: '0904567890', student_code: 'GV004', cefr_current: 'B2', role: 'TeacherTA' },
+  { id: 'admin-1', full_name: 'Admin Hệ thống', email: 'admin@demo.com', phone: '0905678901', student_code: 'AD001', cefr_current: 'C2', role: 'Admin' },
+];
+
+export function loadDemoTeachers(): DemoTeacher[] {
+  const raw = getStore<DemoTeacher>(DEMO_TEACHERS_KEY);
+  return raw.length > 0 ? raw : SEED_TEACHERS;
+}
+
+export function saveDemoTeacher(data: {
+  id?: string;
+  full_name: string;
+  email?: string | null;
+  phone?: string | null;
+  student_code?: string | null;
+  cefr_current: string;
+}): DemoTeacher {
+  const list = loadDemoTeachers();
+
+  if (data.id) {
+    const idx = list.findIndex(t => t.id === data.id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...data, id: data.id };
+      setStore(DEMO_TEACHERS_KEY, list);
+      return list[idx];
+    }
+  }
+
+  const newTeacher: DemoTeacher = {
+    id: 'teacher-' + crypto.randomUUID().slice(0, 8),
+    full_name: data.full_name,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    student_code: data.student_code ?? null,
+    cefr_current: data.cefr_current,
+    role: 'TeacherTA',
+  };
+  list.push(newTeacher);
+  setStore(DEMO_TEACHERS_KEY, list);
+  return newTeacher;
+}
+
+export function deleteDemoTeacher(id: string) {
+  setStore(DEMO_TEACHERS_KEY, loadDemoTeachers().filter(t => t.id !== id));
+}
+
+/* ==================== STUDENTS ==================== */
+
+export interface DemoStudent {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  student_code: string | null;
+  cefr_current: string;
+  cefr_progress_pct: number;
+  role: string;
+}
+
+const SEED_STUDENTS: DemoStudent[] = [
+  { id: 'student-1', full_name: 'Hoàng Văn Dũng', email: 'dung.hoang@demo.com', phone: '0912345678', student_code: 'HV001', cefr_current: 'A1', cefr_progress_pct: 45, role: 'Student' },
+  { id: 'student-2', full_name: 'Mai Thị Em', email: 'em.mai@demo.com', phone: '0913456789', student_code: 'HV002', cefr_current: 'A2', cefr_progress_pct: 30, role: 'Student' },
+  { id: 'student-3', full_name: 'Võ Minh Phương', email: 'phuong.vo@demo.com', phone: '0914567890', student_code: 'HV003', cefr_current: 'B1', cefr_progress_pct: 60, role: 'Student' },
+  { id: 'student-4', full_name: 'Đặng Thị Giang', email: 'giang.dang@demo.com', phone: '0915678901', student_code: 'HV004', cefr_current: 'A1', cefr_progress_pct: 15, role: 'Student' },
+  { id: 'student-5', full_name: 'Bùi Quang Hải', email: 'hai.bui@demo.com', phone: '0916789012', student_code: 'HV005', cefr_current: 'A2', cefr_progress_pct: 75, role: 'Student' },
+  { id: 'student-6', full_name: 'Lý Tự Trọng', email: 'trong.ly@demo.com', phone: '0917890123', student_code: 'HV006', cefr_current: 'B1', cefr_progress_pct: 20, role: 'Student' },
+  { id: 'student-7', full_name: 'Ngô Thị Hạnh', email: 'hanh.ngo@demo.com', phone: '0918901234', student_code: 'HV007', cefr_current: 'A1', cefr_progress_pct: 90, role: 'Student' },
+  { id: 'student-8', full_name: 'Trịnh Văn Hùng', email: 'hung.trinh@demo.com', phone: '0919012345', student_code: 'HV008', cefr_current: 'A2', cefr_progress_pct: 50, role: 'Student' },
+];
+
+export function loadDemoStudents(): DemoStudent[] {
+  const raw = getStore<DemoStudent>(DEMO_STUDENTS_KEY);
+  return raw.length > 0 ? raw : SEED_STUDENTS;
+}
+
+export function saveDemoStudent(data: {
+  id?: string;
+  full_name: string;
+  email?: string | null;
+  phone?: string | null;
+  student_code?: string | null;
+  cefr_current: string;
+  cefr_progress_pct: number;
+}): DemoStudent {
+  const list = loadDemoStudents();
+
+  if (data.id) {
+    const idx = list.findIndex(s => s.id === data.id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...data, id: data.id };
+      setStore(DEMO_STUDENTS_KEY, list);
+      return list[idx];
+    }
+  }
+
+  const newStudent: DemoStudent = {
+    id: 'student-' + crypto.randomUUID().slice(0, 8),
+    full_name: data.full_name,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    student_code: data.student_code ?? null,
+    cefr_current: data.cefr_current,
+    cefr_progress_pct: data.cefr_progress_pct,
+    role: 'Student',
+  };
+  list.push(newStudent);
+  setStore(DEMO_STUDENTS_KEY, list);
+  return newStudent;
+}
+
+export function deleteDemoStudent(id: string) {
+  setStore(DEMO_STUDENTS_KEY, loadDemoStudents().filter(s => s.id !== id));
+}
+
+/* ==================== ENROLLMENTS ==================== */
+
+export interface DemoEnrollment {
+  id: string;
+  class_id: string;
+  student_id: string;
+  created_at: string;
+}
+
+const DEMO_ENROLLMENTS_KEY = 'demo_enrollments';
+
+const SEED_ENROLLMENTS: DemoEnrollment[] = [
+  { id: 'enr-1', class_id: 'demo-class-1', student_id: 'student-1', created_at: new Date().toISOString() },
+  { id: 'enr-2', class_id: 'demo-class-1', student_id: 'student-2', created_at: new Date().toISOString() },
+  { id: 'enr-3', class_id: 'demo-class-1', student_id: 'student-3', created_at: new Date().toISOString() },
+  { id: 'enr-4', class_id: 'demo-class-2', student_id: 'student-4', created_at: new Date().toISOString() },
+  { id: 'enr-5', class_id: 'demo-class-2', student_id: 'student-5', created_at: new Date().toISOString() },
+  { id: 'enr-6', class_id: 'demo-class-3', student_id: 'student-6', created_at: new Date().toISOString() },
+  { id: 'enr-7', class_id: 'demo-class-3', student_id: 'student-7', created_at: new Date().toISOString() },
+  { id: 'enr-8', class_id: 'demo-class-3', student_id: 'student-8', created_at: new Date().toISOString() },
+];
+
+export function loadDemoEnrollments(): DemoEnrollment[] {
+  const raw = getStore<DemoEnrollment>(DEMO_ENROLLMENTS_KEY);
+  return raw.length > 0 ? raw : SEED_ENROLLMENTS;
+}
+
+export function addDemoEnrollments(classId: string, studentIds: string[]): DemoEnrollment[] {
+  const list = loadDemoEnrollments();
+  const existing = list.filter(e => e.class_id === classId).map(e => e.student_id);
+  const toAdd = studentIds.filter(id => !existing.includes(id));
+
+  const added: DemoEnrollment[] = toAdd.map(student_id => ({
+    id: 'enr-' + crypto.randomUUID().slice(0, 8),
+    class_id: classId,
+    student_id,
+    created_at: new Date().toISOString(),
+  }));
+  list.push(...added);
+  setStore(DEMO_ENROLLMENTS_KEY, list);
+  return added;
+}
+
+export function deleteDemoEnrollment(id: string) {
+  setStore(DEMO_ENROLLMENTS_KEY, loadDemoEnrollments().filter(e => e.id !== id));
+}
+
+/* ==================== SESSIONS ==================== */
+
+export interface DemoSession {
+  id: string;
+  class_id: string;
+  title: string | null;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  teacher_id: string | null;
+}
+
+const DEMO_SESSIONS_KEY = 'demo_sessions';
+
+const SEED_SESSIONS: DemoSession[] = [
+  { id: 'ses-1', class_id: 'demo-class-1', title: 'Bài 1 - Bảng chữ cái', session_date: '2026-06-09', start_time: '08:00', end_time: '09:30', teacher_id: 'teacher-1' },
+  { id: 'ses-2', class_id: 'demo-class-1', title: 'Bài 2 - Chào hỏi', session_date: '2026-06-11', start_time: '08:00', end_time: '09:30', teacher_id: 'teacher-1' },
+  { id: 'ses-3', class_id: 'demo-class-2', title: 'Bài 1 - Passé Composé', session_date: '2026-06-10', start_time: '13:30', end_time: '15:00', teacher_id: 'teacher-2' },
+  { id: 'ses-4', class_id: 'demo-class-3', title: 'Bài 1 - Subjonctif', session_date: '2026-06-09', start_time: '18:00', end_time: '19:30', teacher_id: 'teacher-3' },
+];
+
+export function loadDemoSessions(): DemoSession[] {
+  const raw = getStore<DemoSession>(DEMO_SESSIONS_KEY);
+  return raw.length > 0 ? raw : SEED_SESSIONS;
+}
+
+export function saveDemoSession(data: {
+  id?: string;
+  class_id: string;
+  title?: string | null;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  teacher_id?: string | null;
+}): DemoSession {
+  const list = loadDemoSessions();
+
+  if (data.id) {
+    const idx = list.findIndex(s => s.id === data.id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...data, id: data.id };
+      setStore(DEMO_SESSIONS_KEY, list);
+      return list[idx];
+    }
+  }
+
+  const newSession: DemoSession = {
+    id: 'ses-' + crypto.randomUUID().slice(0, 8),
+    class_id: data.class_id,
+    title: data.title ?? null,
+    session_date: data.session_date,
+    start_time: data.start_time,
+    end_time: data.end_time,
+    teacher_id: data.teacher_id ?? null,
+  };
+  list.unshift(newSession);
+  setStore(DEMO_SESSIONS_KEY, list);
+  return newSession;
+}
+
+export function deleteDemoSession(id: string) {
+  setStore(DEMO_SESSIONS_KEY, loadDemoSessions().filter(s => s.id !== id));
+}

@@ -65,6 +65,7 @@ export default function DashboardLayout({
     evaluations: 'Lịch sử đánh giá',
     reports: 'Duyệt báo cáo',
     classes: 'Lớp học',
+    teachers: 'Giáo viên',
     sessions: 'Buổi học',
     students: 'Học viên',
     enrollments: 'Ghi danh',

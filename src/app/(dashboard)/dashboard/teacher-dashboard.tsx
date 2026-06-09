@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
+import { isDemoMode, loadDemoClasses, loadDemoStudents, loadDemoTeachers } from '@/data/admin-store';
 import { Users, GraduationCap, ClipboardCheck, TrendingUp, BookOpen, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -15,31 +16,81 @@ interface ClassStats {
   schedule: string | null;
 }
 
+function generateDemoClassStats(): ClassStats[] {
+  const demoClasses = loadDemoClasses();
+  const demoStudents = loadDemoStudents();
+  const teachers = loadDemoTeachers();
+
+  if (demoClasses.length > 0) {
+    return demoClasses.map(cls => {
+      const classSize = Math.floor(Math.random() * 5) + 3;
+      const avgScore = +(3 + Math.random() * 1.5).toFixed(1);
+      const evalCount = Math.floor(Math.random() * 8) + 2;
+      return {
+        id: cls.id,
+        title: cls.title,
+        level: cls.level,
+        schedule: cls.schedule,
+        studentCount: classSize,
+        avgScore,
+        evalCount,
+      };
+    });
+  }
+
+  const teacherNames = teachers.map(t => t.full_name);
+  const seedClasses = [
+    { id: 'demo-class-1', title: 'Tiếng Pháp A1 - Sáng T2-T4', level: 'A1', schedule: 'Thứ 2 & Thứ 4, 8:00-9:30' },
+    { id: 'demo-class-2', title: 'Tiếng Pháp A2 - Chiều T3-T5', level: 'A2', schedule: 'Thứ 3 & Thứ 5, 13:30-15:00' },
+    { id: 'demo-class-3', title: 'Tiếng Pháp B1 - Tối T2-T4', level: 'B1', schedule: 'Thứ 2 & Thứ 4, 18:00-19:30' },
+  ];
+  return seedClasses.map((cls, i) => ({
+    ...cls,
+    studentCount: 5 + i * 3,
+    avgScore: +(3.5 + Math.random() * 1.2).toFixed(1),
+    evalCount: 4 + i * 3,
+  }));
+}
+
+function generateWeakStudents() {
+  const students = loadDemoStudents();
+  if (students.length === 0) return [];
+  const shuffled = [...students].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 3).map(s => ({
+    full_name: s.full_name,
+    student_code: s.student_code || '',
+    avg: +(2 + Math.random() * 0.8).toFixed(1),
+  })).sort((a, b) => a.avg - b.avg);
+}
+
 export function TeacherDashboard() {
   const supabase = createClient();
   const [stats, setStats] = useState<ClassStats[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
   const [totalEvals, setTotalEvals] = useState(0);
   const [weakStudents, setWeakStudents] = useState<{ full_name: string; student_code: string; avg: number }[]>([]);
+  const demo = isDemoMode();
 
   useEffect(() => {
     loadTeacherData();
   }, []);
 
   async function loadTeacherData() {
+    if (demo) {
+      const classStats = generateDemoClassStats();
+      setStats(classStats);
+      setTotalStudents(classStats.reduce((s, c) => s + c.studentCount, 0));
+      setTotalEvals(classStats.reduce((s, c) => s + c.evalCount, 0));
+      setWeakStudents(generateWeakStudents());
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     let teacherId = session?.user.id;
 
-    // Demo fallback
-    if (!teacherId) {
-      const demoEmail = localStorage.getItem('demo_user');
-      if (demoEmail === 'teacher@demo.com') teacherId = 'demo-teacher';
-      else if (demoEmail === 'admin@demo.com') teacherId = 'demo-admin';
-    }
-
+    if (!teacherId) return;
     if (!teacherId) return;
 
-    // Get classes taught by this teacher
     const { data: classes } = await supabase
       .from('classes')
       .select('*')
@@ -48,7 +99,6 @@ export function TeacherDashboard() {
 
     if (!classes || classes.length === 0) return;
 
-    // For each class, get enrollments and evaluations
     const classStats: ClassStats[] = [];
     let allStudents = 0;
     let allEvals = 0;
@@ -98,7 +148,6 @@ export function TeacherDashboard() {
     setTotalStudents(allStudents);
     setTotalEvals(allEvals);
 
-    // Find students with low averages
     const { data: lowEvals } = await supabase
       .from('evaluations')
       .select('student_id, pronunciation, fluency, vocabulary_oral, grammar_conjugation, structure, spelling, comprehension_rate, engagement, profiles!student_id(full_name, student_code)')

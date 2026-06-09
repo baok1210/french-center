@@ -34,10 +34,10 @@ export default function AdminReportsPage() {
   }
 
   const statusConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    draft: { icon: <Clock className="h-4 w-4" strokeWidth={1.5} />, label: 'Nháp', color: 'text-amber-600 bg-amber-50' },
-    pending_approval: { icon: <FileText className="h-4 w-4" strokeWidth={1.5} />, label: 'Chờ duyệt', color: 'text-blue-600 bg-blue-50' },
-    approved: { icon: <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />, label: 'Đã duyệt', color: 'text-green-600 bg-green-50' },
-    sent: { icon: <Send className="h-4 w-4" strokeWidth={1.5} />, label: 'Đã gửi', color: 'text-primary bg-primary/5' },
+    draft: { icon: <Clock className="h-4 w-4" strokeWidth={1.5} />, label: 'Nháp', color: 'text-warning bg-warning/10' },
+    pending_approval: { icon: <FileText className="h-4 w-4" strokeWidth={1.5} />, label: 'Chờ duyệt', color: 'text-primary bg-primary/10' },
+    approved: { icon: <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />, label: 'Đã duyệt', color: 'text-success bg-success/10' },
+    sent: { icon: <Send className="h-4 w-4" strokeWidth={1.5} />, label: 'Đã gửi', color: 'text-muted-foreground bg-muted/50' },
   };
 
   return (

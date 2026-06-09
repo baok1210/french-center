@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin', 'vietnamese'] });
 
 export const metadata: Metadata = {
-  title: 'French Center - Đánh giá năng lực',
-  description: 'Hệ thống đánh giá năng lực học viên tiếng Pháp',
+  title: 'French Center - Học tiếng Pháp trực tuyến',
+  description: 'Nền tảng học tiếng Pháp miễn phí với lộ trình cá nhân hóa, flashcard thông minh và bài tập tương tác.',
 };
 
 export default function RootLayout({

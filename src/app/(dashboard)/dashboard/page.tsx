@@ -11,6 +11,8 @@ import {
   MicroProgressBanner, CefrRoadmap, ExamReadinessGauge,
   KnowledgeHeatmap, SkillRadar, TrendLineChart, TodoList,
 } from '@/components/dashboard';
+import { BookOpen, Wand2, Brain, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
 import { TeacherDashboard } from './teacher-dashboard';
 
 // Mock data for development
@@ -87,9 +89,34 @@ function StudentDashboard() {
   }
 
   const { timeWeightedAvg, effortScore, skillDelta, examReadiness, knowledgeGaps, microProgress, bestImprovement, cefrProgress } = analytics;
+  const [hasPath, setHasPath] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('learning_path');
+    setHasPath(!!saved);
+  }, []);
 
   return (
     <div className="space-y-6 pb-10">
+      {/* Quick Start */}
+      {!hasPath && (
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/[0.04] to-transparent p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold">Chào mừng bạn đến với French Center!</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Bắt đầu hành trình học tiếng Pháp ngay hôm nay.</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/wizard" className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90">
+                <Wand2 className="h-4 w-4" strokeWidth={1.5} /> Tạo lộ trình
+              </Link>
+              <Link href="/knowledge" className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium transition-all hover:bg-secondary">
+                <BookOpen className="h-4 w-4" strokeWidth={1.5} /> Khám phá bài học
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
       <MicroProgressBanner
         bestImprovement={bestImprovement}
         effortScore={effortScore}

@@ -2,26 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
-import { Plus, Calendar, Clock, Edit3, Trash2, X, Save, AlertCircle, ChevronDown } from 'lucide-react';
-
-interface SessionRecord {
-  id: string;
-  class_id: string;
-  title: string | null;
-  session_date: string;
-  start_time: string;
-  end_time: string;
-  teacher_id: string;
-  classes?: { title: string; level: string };
-}
+import { isDemoMode, loadDemoSessions, saveDemoSession, deleteDemoSession, loadDemoClasses, loadDemoTeachers } from '@/data/admin-store';
+import type { DemoSession } from '@/data/admin-store';
+import { Plus, Calendar, Clock, Edit3, Trash2, X, Save, AlertCircle } from 'lucide-react';
 
 export default function AdminSessionsPage() {
   const supabase = createClient();
-  const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [classes, setClasses] = useState<{ id: string; title: string; level: string }[]>([]);
   const [teachers, setTeachers] = useState<{ id: string; full_name: string }[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<SessionRecord | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [filterClass, setFilterClass] = useState('');
@@ -33,10 +24,27 @@ export default function AdminSessionsPage() {
     end_time: '',
     teacher_id: '',
   });
+  const demo = isDemoMode();
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
+    if (demo) {
+      const demoSe = loadDemoSessions();
+      const demoCls = loadDemoClasses();
+      const demoTeach = loadDemoTeachers();
+
+      setClasses(demoCls.map(c => ({ id: c.id, title: c.title, level: c.level })));
+      setTeachers(demoTeach.map(t => ({ id: t.id, full_name: t.full_name })));
+
+      const enriched = demoSe.map(s => {
+        const cls = demoCls.find(c => c.id === s.class_id);
+        return { ...s, classes: cls ? { title: cls.title, level: cls.level } : { title: 'N/A', level: '' } };
+      });
+      setSessions(enriched);
+      return;
+    }
+
     const { data: sess } = await supabase
       .from('class_sessions')
       .select('*, classes!inner(title, level)')
@@ -58,7 +66,7 @@ export default function AdminSessionsPage() {
     setShowModal(true);
   }
 
-  function openEdit(sess: SessionRecord) {
+  function openEdit(sess: any) {
     setEditing(sess);
     setForm({
       class_id: sess.class_id,
@@ -66,7 +74,7 @@ export default function AdminSessionsPage() {
       session_date: sess.session_date,
       start_time: sess.start_time,
       end_time: sess.end_time,
-      teacher_id: sess.teacher_id,
+      teacher_id: sess.teacher_id || '',
     });
     setError('');
     setShowModal(true);
@@ -79,6 +87,22 @@ export default function AdminSessionsPage() {
     setSaving(true);
     setError('');
 
+    if (demo) {
+      saveDemoSession({
+        id: editing?.id,
+        class_id: form.class_id,
+        title: form.title || null,
+        session_date: form.session_date,
+        start_time: form.start_time,
+        end_time: form.end_time,
+        teacher_id: form.teacher_id || null,
+      });
+      setSaving(false);
+      setShowModal(false);
+      loadData();
+      return;
+    }
+
     const payload = {
       class_id: form.class_id,
       title: form.title || null,
@@ -88,29 +112,34 @@ export default function AdminSessionsPage() {
       teacher_id: form.teacher_id || null,
     };
 
+    let err: any;
     if (editing) {
-      const { error: err } = await supabase.from('class_sessions').update(payload).eq('id', editing.id);
-      if (err) setError(err.message);
+      const { error: e } = await supabase.from('class_sessions').update(payload).eq('id', editing.id);
+      err = e;
     } else {
-      const { error: err } = await supabase.from('class_sessions').insert(payload);
-      if (err) setError(err.message);
+      const { error: e } = await supabase.from('class_sessions').insert(payload);
+      err = e;
     }
     setSaving(false);
-    if (!error) {
-      setShowModal(false);
-      loadData();
-    }
+    if (err) { setError(err.message); return; }
+    setShowModal(false);
+    loadData();
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Xóa buổi học này?')) return;
+    if (demo) {
+      deleteDemoSession(id);
+      loadData();
+      return;
+    }
     const { error: err } = await supabase.from('class_sessions').delete().eq('id', id);
     if (err) alert('Lỗi: ' + err.message);
     else loadData();
   }
 
   const filteredSessions = filterClass
-    ? sessions.filter((s) => s.class_id === filterClass)
+    ? sessions.filter((s: any) => s.class_id === filterClass)
     : sessions;
 
   return (
@@ -126,7 +155,6 @@ export default function AdminSessionsPage() {
         </button>
       </div>
 
-      {/* Filter */}
       <div className="flex items-center gap-3">
         <label className="text-xs font-medium text-muted-foreground">Lọc theo lớp:</label>
         <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
@@ -136,9 +164,8 @@ export default function AdminSessionsPage() {
         </select>
       </div>
 
-      {/* Sessions List */}
       <div className="space-y-3">
-        {filteredSessions.map((sess) => (
+        {filteredSessions.map((sess: any) => (
           <div key={sess.id}
             className="diffusion-shadow flex items-center justify-between gap-4 rounded-2xl border border-border/50 bg-card p-5">
             <div className="flex items-center gap-4">
@@ -176,7 +203,6 @@ export default function AdminSessionsPage() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-border/50 bg-card p-6 shadow-xl">

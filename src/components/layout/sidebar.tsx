@@ -5,26 +5,42 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, GraduationCap, ClipboardCheck, FileBarChart,
   Bot, BookOpen, LogOut, ChevronLeft, Settings, Users, Calendar,
-  UserPlus, Mic,
+  UserPlus, Mic, Library, Wand2, Brain, Notebook,
 } from 'lucide-react';
 import { useState } from 'react';
 import { ThemeToggle } from './theme-toggle';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Student', 'TeacherTA', 'Admin'] },
-  { href: '/teacher/evaluate', label: 'Nhập điểm', icon: ClipboardCheck, roles: ['TeacherTA', 'Admin'] },
-  { href: '/teacher/evaluations', label: 'Lịch sử ĐG', icon: ClipboardCheck, roles: ['TeacherTA', 'Admin'] },
-  // Admin management
-  { href: '/admin/classes', label: 'Lớp học', icon: GraduationCap, roles: ['Admin'] },
-  { href: '/admin/sessions', label: 'Buổi học', icon: Calendar, roles: ['Admin'] },
-  { href: '/admin/enrollments', label: 'Ghi danh', icon: UserPlus, roles: ['Admin'] },
-  { href: '/admin/students', label: 'Học viên', icon: Users, roles: ['Admin'] },
-  { href: '/admin/reports', label: 'Báo cáo', icon: FileBarChart, roles: ['Admin'] },
-  // Common
-  { href: '/pronunciation', label: 'Phát âm', icon: Mic, roles: ['Student', 'TeacherTA', 'Admin'] },
-  { href: '/resources', label: 'Tài nguyên', icon: BookOpen, roles: ['Student', 'TeacherTA', 'Admin'] },
-  { href: '/ai-assistant', label: 'Trợ lý AI', icon: Bot, roles: ['Student', 'TeacherTA', 'Admin'] },
-  { href: '/settings', label: 'Cài đặt', icon: Settings, roles: ['Student', 'TeacherTA', 'Admin'] },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: any;
+  roles: string[];
+  group: string;
+  groupLabel: string;
+}
+
+const navItems: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Student', 'TeacherTA', 'Admin'], group: 'main', groupLabel: '' },
+  // Teaching
+  { href: '/teacher/evaluate', label: 'Nhập điểm', icon: ClipboardCheck, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
+  { href: '/teacher/evaluations', label: 'Lịch sử ĐG', icon: ClipboardCheck, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
+  // Admin
+  { href: '/admin/classes', label: 'Lớp học', icon: GraduationCap, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
+  { href: '/admin/teachers', label: 'Giáo viên', icon: Users, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
+  { href: '/admin/sessions', label: 'Buổi học', icon: Calendar, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
+  { href: '/admin/enrollments', label: 'Ghi danh', icon: UserPlus, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
+  { href: '/admin/students', label: 'Học viên', icon: Users, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
+  { href: '/admin/reports', label: 'Báo cáo', icon: FileBarChart, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
+  // Learning
+  { href: '/knowledge', label: 'Kiến thức', icon: BookOpen, roles: ['Student', 'TeacherTA', 'Admin'], group: 'learning', groupLabel: 'Học tập' },
+  { href: '/workspace', label: 'Thư viện', icon: Library, roles: ['Student', 'TeacherTA', 'Admin'], group: 'learning', groupLabel: 'Học tập' },
+  { href: '/review', label: 'Ôn tập', icon: Brain, roles: ['Student', 'TeacherTA', 'Admin'], group: 'learning', groupLabel: 'Học tập' },
+  { href: '/wizard', label: 'Lộ trình', icon: Wand2, roles: ['Student', 'TeacherTA', 'Admin'], group: 'learning', groupLabel: 'Học tập' },
+  // Tools
+  { href: '/pronunciation', label: 'Phát âm', icon: Mic, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
+  { href: '/resources', label: 'Tài nguyên', icon: Notebook, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
+  { href: '/ai-assistant', label: 'Trợ lý AI', icon: Bot, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
+  { href: '/settings', label: 'Cài đặt', icon: Settings, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
 ];
 
 interface SidebarProps {
@@ -38,9 +54,15 @@ export function Sidebar({ role = 'Student' }: SidebarProps) {
 
   const filtered = navItems.filter((item) => item.roles.includes(role));
 
+  const groups = filtered.reduce<{ group: string; groupLabel: string; items: NavItem[] }[]>((acc, item) => {
+    const existing = acc.find(g => g.group === item.group);
+    if (existing) existing.items.push(item);
+    else acc.push({ group: item.group, groupLabel: item.groupLabel, items: [item] });
+    return acc;
+  }, []);
+
   async function handleLogout() {
     localStorage.removeItem('demo_user');
-    // Also try to sign out from Supabase
     try {
       const { createClient } = await import('@/lib/supabase-client');
       const supabase = createClient();
@@ -57,15 +79,14 @@ export function Sidebar({ role = 'Student' }: SidebarProps) {
     >
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-border/50 px-5">
-        {!collapsed && (
+        {!collapsed ? (
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-[10px] font-bold text-primary-foreground">
               FC
             </div>
             <span className="text-sm font-semibold tracking-tight">French Center</span>
           </Link>
-        )}
-        {collapsed && (
+        ) : (
           <Link href="/dashboard" className="mx-auto">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-[10px] font-bold text-primary-foreground">
               FC
@@ -75,24 +96,36 @@ export function Sidebar({ role = 'Student' }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {filtered.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/');
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
-                active
-                  ? 'bg-primary/10 font-medium text-primary'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              }`}
-            >
-              <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        {groups.map((group) => (
+          <div key={group.group}>
+            {!collapsed && group.groupLabel && (
+              <p className="mb-1 mt-3 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50 first:mt-0">
+                {group.groupLabel}
+              </p>
+            )}
+            {collapsed && group.groupLabel && (
+              <div className="my-3 border-t border-border/30" />
+            )}
+            {group.items.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(item.href + '/');
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+                    active
+                      ? 'bg-primary/10 font-medium text-primary'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  }`}
+                >
+                  <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}

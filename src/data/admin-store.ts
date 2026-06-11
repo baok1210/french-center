@@ -319,3 +319,141 @@ export function saveDemoSession(data: {
 export function deleteDemoSession(id: string) {
   setStore(DEMO_SESSIONS_KEY, loadDemoSessions().filter(s => s.id !== id));
 }
+
+/* ==================== EVALUATIONS ==================== */
+
+export interface DemoEvaluation {
+  id: string;
+  student_id: string;
+  class_session_id: string;
+  teacher_id: string;
+  session_date: string;
+  pronunciation: number;
+  fluency: number;
+  vocabulary_oral: number;
+  grammar_conjugation: number;
+  structure: number;
+  spelling: number;
+  classwork_completion_rate: number;
+  comprehension_rate: number;
+  attendance: string;
+  engagement: number;
+  homework: string;
+  notes: string | null;
+  is_locked: boolean;
+  created_at: string;
+}
+
+const DEMO_EVALUATIONS_KEY = 'demo_evaluations';
+
+const SEED_EVALUATIONS: DemoEvaluation[] = [
+  { id: 'eval-1', student_id: 'student-1', class_session_id: 'ses-1', teacher_id: 'teacher-1', session_date: '2026-06-09', pronunciation: 4, fluency: 3, vocabulary_oral: 4, grammar_conjugation: 3, structure: 3, spelling: 4, classwork_completion_rate: 85, comprehension_rate: 4, attendance: 'present', engagement: 4, homework: 'on_time', notes: null, is_locked: false, created_at: new Date().toISOString() },
+  { id: 'eval-2', student_id: 'student-2', class_session_id: 'ses-1', teacher_id: 'teacher-1', session_date: '2026-06-09', pronunciation: 3, fluency: 3, vocabulary_oral: 2, grammar_conjugation: 3, structure: 3, spelling: 3, classwork_completion_rate: 70, comprehension_rate: 3, attendance: 'present', engagement: 3, homework: 'on_time', notes: null, is_locked: false, created_at: new Date().toISOString() },
+  { id: 'eval-3', student_id: 'student-3', class_session_id: 'ses-1', teacher_id: 'teacher-1', session_date: '2026-06-09', pronunciation: 2, fluency: 2, vocabulary_oral: 2, grammar_conjugation: 2, structure: 2, spelling: 3, classwork_completion_rate: 50, comprehension_rate: 2, attendance: 'late', engagement: 2, homework: 'missing', notes: null, is_locked: false, created_at: new Date().toISOString() },
+  { id: 'eval-4', student_id: 'student-4', class_session_id: 'ses-3', teacher_id: 'teacher-2', session_date: '2026-06-10', pronunciation: 5, fluency: 4, vocabulary_oral: 5, grammar_conjugation: 4, structure: 4, spelling: 5, classwork_completion_rate: 95, comprehension_rate: 5, attendance: 'present', engagement: 5, homework: 'on_time', notes: null, is_locked: true, created_at: new Date().toISOString() },
+  { id: 'eval-5', student_id: 'student-5', class_session_id: 'ses-3', teacher_id: 'teacher-2', session_date: '2026-06-10', pronunciation: 3, fluency: 3, vocabulary_oral: 3, grammar_conjugation: 3, structure: 3, spelling: 3, classwork_completion_rate: 75, comprehension_rate: 3, attendance: 'present', engagement: 3, homework: 'late', notes: null, is_locked: true, created_at: new Date().toISOString() },
+  { id: 'eval-6', student_id: 'student-6', class_session_id: 'ses-4', teacher_id: 'teacher-3', session_date: '2026-06-09', pronunciation: 2, fluency: 3, vocabulary_oral: 2, grammar_conjugation: 2, structure: 3, spelling: 2, classwork_completion_rate: 60, comprehension_rate: 2, attendance: 'absent', engagement: 2, homework: 'missing', notes: null, is_locked: false, created_at: new Date().toISOString() },
+];
+
+export function loadDemoEvaluations(): DemoEvaluation[] {
+  const raw = getStore<DemoEvaluation>(DEMO_EVALUATIONS_KEY);
+  return raw.length > 0 ? raw : SEED_EVALUATIONS;
+}
+
+export function saveDemoEvaluation(data: {
+  id?: string;
+  student_id: string;
+  class_session_id: string;
+  teacher_id: string;
+  session_date: string;
+  pronunciation: number;
+  fluency: number;
+  vocabulary_oral: number;
+  grammar_conjugation: number;
+  structure: number;
+  spelling: number;
+  classwork_completion_rate: number;
+  comprehension_rate: number;
+  attendance: string;
+  engagement: number;
+  homework: string;
+  notes?: string | null;
+  is_locked?: boolean;
+}): DemoEvaluation {
+  const list = loadDemoEvaluations();
+
+  if (data.id) {
+    const idx = list.findIndex(e => e.id === data.id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...data, id: data.id, created_at: list[idx].created_at };
+      setStore(DEMO_EVALUATIONS_KEY, list);
+      return list[idx];
+    }
+  }
+
+  const newEval: DemoEvaluation = {
+    id: 'eval-' + crypto.randomUUID().slice(0, 8),
+    student_id: data.student_id,
+    class_session_id: data.class_session_id,
+    teacher_id: data.teacher_id,
+    session_date: data.session_date,
+    pronunciation: data.pronunciation,
+    fluency: data.fluency,
+    vocabulary_oral: data.vocabulary_oral,
+    grammar_conjugation: data.grammar_conjugation,
+    structure: data.structure,
+    spelling: data.spelling,
+    classwork_completion_rate: data.classwork_completion_rate,
+    comprehension_rate: data.comprehension_rate,
+    attendance: data.attendance,
+    engagement: data.engagement,
+    homework: data.homework,
+    notes: data.notes ?? null,
+    is_locked: data.is_locked ?? false,
+    created_at: new Date().toISOString(),
+  };
+  list.unshift(newEval);
+  setStore(DEMO_EVALUATIONS_KEY, list);
+  return newEval;
+}
+
+export function deleteDemoEvaluation(id: string) {
+  setStore(DEMO_EVALUATIONS_KEY, loadDemoEvaluations().filter(e => e.id !== id));
+}
+
+/* ==================== REPORTS ==================== */
+
+export interface DemoReport {
+  id: string;
+  student_id: string;
+  student_name: string;
+  student_code: string;
+  period_start: string;
+  period_end: string;
+  status: string;
+  created_at: string;
+  reviewed_at: string | null;
+  sent_at: string | null;
+}
+
+const DEMO_REPORTS_KEY = 'demo_reports';
+
+const SEED_REPORTS: DemoReport[] = [
+  { id: 'rpt-1', student_id: 'student-1', student_name: 'Hoàng Văn Dũng', student_code: 'HV001', period_start: '2026-05-01', period_end: '2026-05-31', status: 'draft', created_at: new Date().toISOString(), reviewed_at: null, sent_at: null },
+  { id: 'rpt-2', student_id: 'student-2', student_name: 'Mai Thị Em', student_code: 'HV002', period_start: '2026-05-01', period_end: '2026-05-31', status: 'pending_approval', created_at: new Date().toISOString(), reviewed_at: null, sent_at: null },
+  { id: 'rpt-3', student_id: 'student-3', student_name: 'Võ Minh Phương', student_code: 'HV003', period_start: '2026-05-01', period_end: '2026-05-31', status: 'approved', created_at: new Date().toISOString(), reviewed_at: new Date().toISOString(), sent_at: null },
+];
+
+export function loadDemoReports(): DemoReport[] {
+  const raw = getStore<DemoReport>(DEMO_REPORTS_KEY);
+  return raw.length > 0 ? raw : SEED_REPORTS;
+}
+
+export function updateDemoReport(id: string, updates: Partial<DemoReport>) {
+  const list = loadDemoReports();
+  const idx = list.findIndex(r => r.id === id);
+  if (idx !== -1) {
+    list[idx] = { ...list[idx], ...updates };
+    setStore(DEMO_REPORTS_KEY, list);
+  }
+}

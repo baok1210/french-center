@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
-import type { Class, ClassSession, Profile } from '@/types/database';
+import { isDemoMode, loadDemoClasses, loadDemoSessions, loadDemoEnrollments, loadDemoEvaluations, saveDemoEvaluation, loadDemoStudents } from '@/data/admin-store';
+import type { DemoClass, DemoSession, DemoEnrollment, DemoEvaluation } from '@/data/admin-store';
 import { isSessionLocked } from '@/utils/scoring';
 import { ClipboardCheck, Lock, Send, AlertCircle, ChevronDown } from 'lucide-react';
 
@@ -28,12 +29,13 @@ const HOMEWORK_OPTIONS = [
 
 export function EvaluationForm() {
   const supabase = createClient();
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [sessions, setSessions] = useState<ClassSession[]>([]);
-  const [students, setStudents] = useState<Profile[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [locked, setLocked] = useState(false);
   const [success, setSuccess] = useState('');
+  const demo = isDemoMode();
 
   const [form, setForm] = useState({
     student_id: '', class_session_id: '',
@@ -47,31 +49,53 @@ export function EvaluationForm() {
   useEffect(() => { loadClasses(); }, []);
 
   async function loadClasses() {
+    if (demo) {
+      setClasses(loadDemoClasses().map(c => ({ ...c })));
+      return;
+    }
     const { data } = await supabase.from('classes').select('*').eq('is_active', true);
     if (data) setClasses(data);
   }
 
-  async function loadSessions(classId: string) {
-    const { data } = await supabase.from('class_sessions').select('*').eq('class_id', classId).order('session_date', { ascending: false });
-    if (data) setSessions(data);
-  }
+  async function loadRelatedData(classId: string) {
+    if (demo) {
+      const demoSe = loadDemoSessions();
+      const demoEnr = loadDemoEnrollments();
+      const demoStuds = loadDemoStudents();
 
-  async function loadStudents(classId: string) {
-    const { data } = await supabase.from('enrollments').select('student_id, profiles!inner(full_name, student_code)').eq('class_id', classId);
-    if (data) {
-      setStudents(data.map((e: any) => ({
-        id: e.student_id, full_name: e.profiles.full_name,
+      setSessions(demoSe.filter(s => s.class_id === classId));
+
+      const enrolledIds = demoEnr.filter(e => e.class_id === classId).map(e => e.student_id);
+      setStudents(demoStuds.filter(s => enrolledIds.includes(s.id)).map(s => ({
+        id: s.id,
+        full_name: s.full_name,
+        student_code: s.student_code,
+      })));
+      return;
+    }
+
+    const { data: sess } = await supabase.from('class_sessions').select('*').eq('class_id', classId).order('session_date', { ascending: false });
+    if (sess) setSessions(sess);
+
+    const { data: enr } = await supabase.from('enrollments').select('student_id, profiles!inner(full_name, student_code)').eq('class_id', classId);
+    if (enr) {
+      setStudents(enr.map((e: any) => ({
+        id: e.student_id,
+        full_name: e.profiles.full_name,
         student_code: e.profiles.student_code,
-        role: 'Student' as const, email: null, avatar_url: null, phone: null,
-        cefr_current: 'A1', cefr_progress_pct: 0, created_at: '', updated_at: '',
       })));
     }
   }
 
   function handleSessionChange(sessionId: string) {
     setForm({ ...form, class_session_id: sessionId });
-    const session = sessions.find(s => s.id === sessionId);
-    if (session) setLocked(isSessionLocked(session.session_date, session.end_time));
+    if (demo) {
+      const session = loadDemoSessions().find(s => s.id === sessionId);
+      if (session) setLocked(isSessionLocked(session.session_date, session.end_time));
+    } else {
+      const session = sessions.find((s: any) => s.id === sessionId);
+      if (session) setLocked(isSessionLocked(session.session_date, session.end_time));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,13 +104,39 @@ export function EvaluationForm() {
     setSubmitting(true);
     setSuccess('');
 
+    if (demo) {
+      const session = loadDemoSessions().find(s => s.id === form.class_session_id);
+      saveDemoEvaluation({
+        student_id: form.student_id,
+        class_session_id: form.class_session_id,
+        teacher_id: 'demo-teacher',
+        session_date: session?.session_date || new Date().toISOString().split('T')[0],
+        pronunciation: form.pronunciation,
+        fluency: form.fluency,
+        vocabulary_oral: form.vocabulary_oral,
+        grammar_conjugation: form.grammar_conjugation,
+        structure: form.structure,
+        spelling: form.spelling,
+        classwork_completion_rate: form.classwork_completion_rate,
+        comprehension_rate: form.comprehension_rate,
+        attendance: form.attendance,
+        engagement: form.engagement,
+        homework: form.homework,
+        notes: form.notes || null,
+      });
+      setSubmitting(false);
+      setSuccess('Đã lưu đánh giá thành công!');
+      resetForm();
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) { setSubmitting(false); return; }
 
     const { error } = await supabase.from('evaluations').insert({
       ...form,
       teacher_id: session.user.id,
-      session_date: sessions.find(s => s.id === form.class_session_id)?.session_date,
+      session_date: sessions.find((s: any) => s.id === form.class_session_id)?.session_date,
     });
 
     setSubmitting(false);
@@ -94,23 +144,28 @@ export function EvaluationForm() {
       setSuccess(`Lỗi: ${error.message}`);
     } else {
       setSuccess('Đã lưu đánh giá thành công!');
-      setForm({
-        student_id: '', class_session_id: '',
-        pronunciation: 3, fluency: 3, vocabulary_oral: 3,
-        grammar_conjugation: 3, structure: 3, spelling: 3,
-        classwork_completion_rate: 75, comprehension_rate: 3,
-        attendance: 'present', engagement: 3, homework: 'on_time',
-        notes: '',
-      });
+      resetForm();
     }
   }
 
-  const Select = ({ label, value, onChange, options, disabled }: any) => (
+  function resetForm() {
+    setForm({
+      student_id: '', class_session_id: '',
+      pronunciation: 3, fluency: 3, vocabulary_oral: 3,
+      grammar_conjugation: 3, structure: 3, spelling: 3,
+      classwork_completion_rate: 75, comprehension_rate: 3,
+      attendance: 'present', engagement: 3, homework: 'on_time',
+      notes: '',
+    });
+  }
+
+  const Select = ({ label, value, onChange, options, disabled, placeholder }: any) => (
     <div>
       <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</label>
       <div className="relative">
         <select value={value} onChange={onChange} disabled={disabled}
           className="w-full appearance-none rounded-xl border border-border bg-card px-3 py-2.5 pr-8 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50">
+          {placeholder && <option value="">{placeholder}</option>}
           {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
@@ -127,7 +182,6 @@ export function EvaluationForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <ClipboardCheck className="h-5 w-5 text-primary" strokeWidth={1.5} />
@@ -143,16 +197,15 @@ export function EvaluationForm() {
         )}
       </div>
 
-      {/* Selects */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Select label="Lớp" value="" options={classes.map(c => ({ value: c.id, label: `${c.title} (${c.level})` }))}
-          onChange={(e: any) => { loadSessions(e.target.value); loadStudents(e.target.value); }}
+        <Select label="Lớp" value={form.class_session_id ? '' : ''} options={classes.map((c: any) => ({ value: c.id, label: `${c.title} (${c.level})` }))}
+          onChange={(e: any) => { loadRelatedData(e.target.value); setForm({ ...form, class_session_id: '' }); }}
           placeholder="Chọn lớp..." />
         <Select label="Buổi học" value={form.class_session_id}
-          options={sessions.map(s => ({ value: s.id, label: `${s.session_date} - ${s.title || ''}` }))}
+          options={sessions.map((s: any) => ({ value: s.id, label: `${s.session_date} - ${s.title || ''}` }))}
           onChange={(e: any) => handleSessionChange(e.target.value)} />
         <Select label="Học viên" value={form.student_id}
-          options={students.map(s => ({ value: s.id, label: `${s.full_name} (${s.student_code || ''})` }))}
+          options={students.map((s: any) => ({ value: s.id, label: `${s.full_name} (${s.student_code || ''})` }))}
           onChange={(e: any) => setForm({ ...form, student_id: e.target.value })} />
       </div>
 

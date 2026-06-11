@@ -2,15 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
+import { isDemoMode, loadDemoReports, updateDemoReport } from '@/data/admin-store';
 import { FileText, CheckCircle2, Clock, Send } from 'lucide-react';
 
 export default function AdminReportsPage() {
   const supabase = createClient();
   const [reports, setReports] = useState<any[]>([]);
+  const demo = isDemoMode();
 
   useEffect(() => { loadReports(); }, []);
 
   async function loadReports() {
+    if (demo) {
+      setReports(loadDemoReports());
+      return;
+    }
     const { data } = await supabase
       .from('reports')
       .select('*, profiles!student_id(full_name, student_code)')
@@ -19,6 +25,11 @@ export default function AdminReportsPage() {
   }
 
   async function approveReport(reportId: string) {
+    if (demo) {
+      updateDemoReport(reportId, { status: 'approved', reviewed_at: new Date().toISOString() });
+      loadReports();
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     await supabase.from('reports')
       .update({ status: 'approved', reviewed_by: session?.user.id, reviewed_at: new Date().toISOString() })
@@ -27,6 +38,11 @@ export default function AdminReportsPage() {
   }
 
   async function sendReport(reportId: string) {
+    if (demo) {
+      updateDemoReport(reportId, { status: 'sent', sent_at: new Date().toISOString() });
+      loadReports();
+      return;
+    }
     await supabase.from('reports')
       .update({ status: 'sent', sent_at: new Date().toISOString() })
       .eq('id', reportId);
@@ -48,38 +64,37 @@ export default function AdminReportsPage() {
       </div>
 
       <div className="space-y-3">
-        {reports.map((report) => {
-          const status = statusConfig[report.status] || statusConfig.draft;
+        {reports.map((rpt: any) => {
+          const status = statusConfig[rpt.status] || statusConfig.draft;
           return (
-            <div key={report.id}
-              className="diffusion-shadow flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/50 bg-card p-5">
-              <div className="flex items-center gap-4">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${status.color}`}>
-                  {status.icon}
+            <div key={rpt.id}
+              className="diffusion-shadow flex items-center justify-between gap-4 rounded-2xl border border-border/50 bg-card p-5">
+              <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <FileText className="h-5 w-5 text-primary" strokeWidth={1.5} />
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{report.profiles?.full_name} ({report.profiles?.student_code})</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{rpt.student_name || rpt.profiles?.full_name || 'N/A'}</p>
                   <p className="text-xs text-muted-foreground">
-                    {report.period_start} → {report.period_end}
-                    {report.is_weekly ? ' • Hàng tuần' : ' • Cuối tháng'}
+                    {rpt.student_code || rpt.profiles?.student_code || ''} — {rpt.period_start} → {rpt.period_end}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {report.status === 'pending_approval' && (
-                  <button onClick={() => approveReport(report.id)}
-                    className="rounded-xl bg-success px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-success/90 ">
-                    Phê duyệt
+              <div className="flex items-center gap-3">
+                <span className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold ${status.color}`}>
+                  {status.icon} {status.label}
+                </span>
+                {rpt.status === 'draft' && (
+                  <button onClick={() => approveReport(rpt.id)}
+                    className="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+                    Duyệt
                   </button>
                 )}
-                {report.status === 'approved' && (
-                  <button onClick={() => sendReport(report.id)}
-                    className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/90 ">
-                    Gửi báo cáo
+                {rpt.status === 'approved' && (
+                  <button onClick={() => sendReport(rpt.id)}
+                    className="rounded-lg bg-success/10 px-3 py-1.5 text-xs font-medium text-success transition-colors hover:bg-success/20">
+                    Gửi
                   </button>
-                )}
-                {report.status === 'sent' && (
-                  <span className="text-xs font-medium text-success">Đã gửi</span>
                 )}
               </div>
             </div>

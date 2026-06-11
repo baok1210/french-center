@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
-import { isDemoMode, loadDemoClasses, loadDemoStudents, loadDemoTeachers } from '@/data/admin-store';
+import { isDemoMode, loadDemoClasses, loadDemoEnrollments, loadDemoEvaluations, loadDemoStudents } from '@/data/admin-store';
 import { Users, GraduationCap, ClipboardCheck, TrendingUp, BookOpen, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -18,38 +18,30 @@ interface ClassStats {
 
 function generateDemoClassStats(): ClassStats[] {
   const demoClasses = loadDemoClasses();
-  const demoStudents = loadDemoStudents();
-  const teachers = loadDemoTeachers();
+  const demoEnrollments = loadDemoEnrollments();
+  const demoEvals = loadDemoEvaluations();
 
-  if (demoClasses.length > 0) {
-    return demoClasses.map(cls => {
-      const classSize = Math.floor(Math.random() * 5) + 3;
-      const avgScore = +(3 + Math.random() * 1.5).toFixed(1);
-      const evalCount = Math.floor(Math.random() * 8) + 2;
-      return {
-        id: cls.id,
-        title: cls.title,
-        level: cls.level,
-        schedule: cls.schedule,
-        studentCount: classSize,
-        avgScore,
-        evalCount,
-      };
+  if (demoClasses.length === 0) return [];
+
+  return demoClasses.map(cls => {
+    const studentCount = demoEnrollments.filter(e => e.class_id === cls.id).length;
+    const classEvals = demoEvals.filter(e => {
+      const enrolledIds = demoEnrollments.filter(en => en.class_id === cls.id).map(en => en.student_id);
+      return enrolledIds.includes(e.student_id);
     });
-  }
-
-  const teacherNames = teachers.map(t => t.full_name);
-  const seedClasses = [
-    { id: 'demo-class-1', title: 'Tiếng Pháp A1 - Sáng T2-T4', level: 'A1', schedule: 'Thứ 2 & Thứ 4, 8:00-9:30' },
-    { id: 'demo-class-2', title: 'Tiếng Pháp A2 - Chiều T3-T5', level: 'A2', schedule: 'Thứ 3 & Thứ 5, 13:30-15:00' },
-    { id: 'demo-class-3', title: 'Tiếng Pháp B1 - Tối T2-T4', level: 'B1', schedule: 'Thứ 2 & Thứ 4, 18:00-19:30' },
-  ];
-  return seedClasses.map((cls, i) => ({
-    ...cls,
-    studentCount: 5 + i * 3,
-    avgScore: +(3.5 + Math.random() * 1.2).toFixed(1),
-    evalCount: 4 + i * 3,
-  }));
+    const avgScore = classEvals.length > 0
+      ? +(classEvals.reduce((sum, e) => sum + (e.pronunciation + e.fluency + e.vocabulary_oral + e.grammar_conjugation + e.structure + e.spelling + e.comprehension_rate + e.engagement) / 8, 0) / classEvals.length).toFixed(1)
+      : 0;
+    return {
+      id: cls.id,
+      title: cls.title,
+      level: cls.level,
+      schedule: cls.schedule,
+      studentCount,
+      avgScore,
+      evalCount: classEvals.length,
+    };
+  });
 }
 
 function generateWeakStudents() {

@@ -4,25 +4,13 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout';
 import { createClient } from '@/lib/supabase-client';
-import type { Profile } from '@/types/database';
+import type { Profile, CefrLevel, UserRole } from '@/types/database';
 import { useState } from 'react';
 
-const DEMO_PROFILES: Record<string, Profile> = {
-  'admin@demo.com': {
-    id: 'demo-admin', role: 'Admin', full_name: 'Admin', student_code: 'AD001',
-    email: 'admin@demo.com', phone: null, avatar_url: null,
-    cefr_current: 'B2', cefr_progress_pct: 70, created_at: '', updated_at: '',
-  },
-  'teacher@demo.com': {
-    id: 'demo-teacher', role: 'TeacherTA', full_name: 'Giáo viên', student_code: 'GV001',
-    email: 'teacher@demo.com', phone: null, avatar_url: null,
-    cefr_current: 'C1', cefr_progress_pct: 85, created_at: '', updated_at: '',
-  },
-  'student@demo.com': {
-    id: 'demo-student', role: 'Student', full_name: 'Nguyễn Văn A', student_code: 'HV001',
-    email: 'student@demo.com', phone: null, avatar_url: null,
-    cefr_current: 'A2', cefr_progress_pct: 35, created_at: '', updated_at: '',
-  },
+const DEMO_CEFR: Record<string, { cefr: CefrLevel; pct: number }> = {
+  Admin: { cefr: 'C2', pct: 70 },
+  TeacherTA: { cefr: 'C1', pct: 85 },
+  Student: { cefr: 'A2', pct: 35 },
 };
 
 export default function DashboardLayout({
@@ -40,9 +28,39 @@ export default function DashboardLayout({
       document.documentElement.classList.add('dark');
     }
 
-    const demoEmail = localStorage.getItem('demo_user');
-    if (demoEmail && DEMO_PROFILES[demoEmail]) {
-      setProfile(DEMO_PROFILES[demoEmail]);
+    const demoRaw = localStorage.getItem('demo_user');
+    if (demoRaw) {
+      try {
+        const parsed = JSON.parse(demoRaw);
+        if (parsed && parsed.role) {
+          const role = parsed.role as UserRole;
+          const cefr = DEMO_CEFR[role] || { cefr: 'A1' as CefrLevel, pct: 0 };
+          setProfile({
+            id: parsed.id,
+            role,
+            full_name: parsed.full_name,
+            student_code: parsed.role === 'Student' ? 'HV001' : parsed.role === 'Admin' ? 'AD001' : 'GV001',
+            email: parsed.email || '',
+            phone: null,
+            avatar_url: null,
+            cefr_current: cefr.cefr,
+            cefr_progress_pct: cefr.pct,
+            created_at: '',
+            updated_at: '',
+          });
+          return;
+        }
+      } catch { /* fall through */ }
+      // Legacy: raw email string
+      const legacyMap: Record<string, UserRole> = { 'admin@demo.com': 'Admin', 'teacher@demo.com': 'TeacherTA', 'student@demo.com': 'Student' };
+      const role: UserRole = legacyMap[demoRaw] || 'Student';
+      const cefr = DEMO_CEFR[role] || { cefr: 'A1' as CefrLevel, pct: 0 };
+      setProfile({
+        id: demoRaw, role, full_name: demoRaw, student_code: '',
+        email: demoRaw, phone: null, avatar_url: null,
+        cefr_current: cefr.cefr, cefr_progress_pct: cefr.pct,
+        created_at: '', updated_at: '',
+      });
       return;
     }
 

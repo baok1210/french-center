@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { isDemoMode, loadDemoEvaluations, deleteDemoEvaluation, loadDemoEnrollments, loadDemoClasses, loadDemoSessions, loadDemoStudents } from '@/data/admin-store';
 import { ClipboardCheck, Search, Edit3, Trash2, Eye, X, Save, AlertCircle } from 'lucide-react';
+import { useRoleGuard } from '@/lib/auth-guard';
 
 const SCORE_OPTIONS = [
   { value: 1, label: '1 - Kém' },
@@ -23,7 +24,10 @@ export default function TeacherEvaluationsPage() {
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { checking } = useRoleGuard(['TeacherTA', 'Admin']);
   const demo = isDemoMode();
+
+  if (checking) return <div className="flex h-[60vh] items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div></div>;
 
   const [editForm, setEditForm] = useState({
     pronunciation: 3, fluency: 3, vocabulary_oral: 3,

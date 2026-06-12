@@ -63,6 +63,7 @@ export function Sidebar({ role = 'Student' }: SidebarProps) {
 
   async function handleLogout() {
     localStorage.removeItem('demo_user');
+    document.cookie = 'demo_role=; path=/; max-age=0';
     try {
       const { createClient } = await import('@/lib/supabase-client');
       const supabase = createClient();

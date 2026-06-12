@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
+import { isDemoMode, saveDemoStudent } from '@/data/admin-store';
 import { UserPlus, AlertCircle, CheckCircle2, LogIn } from 'lucide-react';
 
 export default function SignupPage() {
@@ -12,6 +13,7 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const demo = isDemoMode();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,6 +36,22 @@ export default function SignupPage() {
     if (password.length < 6) {
       setError('Mật khẩu phải có ít nhất 6 ký tự');
       setLoading(false);
+      return;
+    }
+
+    if (demo) {
+      const student = saveDemoStudent({
+        full_name: fullName,
+        email: email,
+        cefr_current: 'A1',
+        cefr_progress_pct: 0,
+      });
+      localStorage.setItem('demo_user', JSON.stringify({
+        id: student.id, email, role: 'Student', full_name: fullName,
+      }));
+      document.cookie = 'demo_role=Student; path=/; max-age=86400; SameSite=Lax';
+      setLoading(false);
+      router.push('/knowledge');
       return;
     }
 

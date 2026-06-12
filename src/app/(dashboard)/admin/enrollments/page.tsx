@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client';
 import { isDemoMode, loadDemoEnrollments, addDemoEnrollments, deleteDemoEnrollment, loadDemoClasses, loadDemoStudents } from '@/data/admin-store';
 import type { DemoEnrollment } from '@/data/admin-store';
 import { UserPlus, Users, Trash2, X, Save, AlertCircle, Search, GraduationCap } from 'lucide-react';
+import { useRoleGuard } from '@/lib/auth-guard';
 
 export default function AdminEnrollmentsPage() {
   const supabase = createClient();
@@ -16,9 +17,12 @@ export default function AdminEnrollmentsPage() {
   const [error, setError] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [form, setForm] = useState({ class_id: '', student_ids: [] as string[] });
+  const { checking } = useRoleGuard(['Admin']);
   const demo = isDemoMode();
 
   useEffect(() => { loadData(); }, []);
+
+  if (checking) return <div className="flex h-[60vh] items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div></div>;
 
   async function loadData() {
     if (demo) {

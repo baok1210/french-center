@@ -39,7 +39,14 @@ export default function LoginPage() {
   }
 
   function handleDemo(email: string) {
-    localStorage.setItem('demo_user', email);
+    const profiles: Record<string, { id: string; role: string; full_name: string }> = {
+      'admin@demo.com': { id: 'admin-1', role: 'Admin', full_name: 'Admin Hệ thống' },
+      'teacher@demo.com': { id: 'demo-teacher', role: 'TeacherTA', full_name: 'Giáo viên' },
+      'student@demo.com': { id: 'demo-student', role: 'Student', full_name: 'Nguyễn Văn A' },
+    };
+    const profile = profiles[email] || { id: email, role: 'Student', full_name: email };
+    localStorage.setItem('demo_user', JSON.stringify({ ...profile, email }));
+    document.cookie = `demo_role=${profile.role}; path=/; max-age=86400; SameSite=Lax`;
     router.push(email === 'student@demo.com' ? '/knowledge' : '/dashboard');
   }
 

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client';
 import { isDemoMode, loadDemoSessions, saveDemoSession, deleteDemoSession, loadDemoClasses, loadDemoTeachers } from '@/data/admin-store';
 import type { DemoSession } from '@/data/admin-store';
 import { Plus, Calendar, Clock, Edit3, Trash2, X, Save, AlertCircle } from 'lucide-react';
+import { useRoleGuard } from '@/lib/auth-guard';
 
 export default function AdminSessionsPage() {
   const supabase = createClient();
@@ -24,9 +25,12 @@ export default function AdminSessionsPage() {
     end_time: '',
     teacher_id: '',
   });
+  const { checking } = useRoleGuard(['Admin']);
   const demo = isDemoMode();
 
   useEffect(() => { loadData(); }, []);
+
+  if (checking) return <div className="flex h-[60vh] items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div></div>;
 
   async function loadData() {
     if (demo) {

@@ -4,9 +4,31 @@ const DEMO_CLASSES_KEY = 'demo_classes';
 const DEMO_TEACHERS_KEY = 'demo_teachers';
 const DEMO_STUDENTS_KEY = 'demo_students';
 
+export function getDemoProfile(): { id: string; email: string; role: string; full_name: string } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('demo_user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.role) return parsed;
+    // Legacy: raw email string
+    return null;
+  } catch { return null; }
+}
+
 export function isDemoMode(): boolean {
-  if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem('demo_user');
+  return !!getDemoProfile();
+}
+
+export function setDemoProfile(profile: { id: string; email: string; role: string; full_name: string }) {
+  localStorage.setItem('demo_user', JSON.stringify(profile));
+  // Set cookie for middleware
+  document.cookie = `demo_role=${profile.role}; path=/; max-age=86400; SameSite=Lax`;
+}
+
+export function clearDemoProfile() {
+  localStorage.removeItem('demo_user');
+  document.cookie = 'demo_role=; path=/; max-age=0';
 }
 
 function getStore<T>(key: string): T[] {
@@ -31,8 +53,15 @@ export interface DemoClass {
   created_at: string;
 }
 
+const SEED_CLASSES: DemoClass[] = [
+  { id: 'demo-class-1', title: 'A1 - Buổi sáng (T2,T4)', level: 'A1', schedule: 'T2 & T4 08:00-09:30', start_date: '2026-01-01', end_date: '2026-06-30', is_active: true, teacher_id: 'teacher-1', teacher_name: 'Nguyễn Văn An', created_at: '2026-01-01' },
+  { id: 'demo-class-2', title: 'A2 - Buổi chiều (T3,T5)', level: 'A2', schedule: 'T3 & T5 13:30-15:00', start_date: '2026-01-01', end_date: '2026-06-30', is_active: true, teacher_id: 'teacher-2', teacher_name: 'Trần Thị Bình', created_at: '2026-01-01' },
+  { id: 'demo-class-3', title: 'B1 - Buổi tối (T2,T4)', level: 'B1', schedule: 'T2 & T4 18:00-19:30', start_date: '2026-01-01', end_date: '2026-06-30', is_active: true, teacher_id: 'teacher-3', teacher_name: 'Lê Hoàng Cường', created_at: '2026-01-01' },
+];
+
 export function loadDemoClasses(): DemoClass[] {
-  return getStore<DemoClass>(DEMO_CLASSES_KEY);
+  const raw = getStore<DemoClass>(DEMO_CLASSES_KEY);
+  return raw.length > 0 ? raw : SEED_CLASSES;
 }
 
 export function saveDemoClass(data: {

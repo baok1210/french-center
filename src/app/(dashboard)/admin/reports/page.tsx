@@ -4,13 +4,17 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { isDemoMode, loadDemoReports, updateDemoReport } from '@/data/admin-store';
 import { FileText, CheckCircle2, Clock, Send } from 'lucide-react';
+import { useRoleGuard } from '@/lib/auth-guard';
 
 export default function AdminReportsPage() {
   const supabase = createClient();
   const [reports, setReports] = useState<any[]>([]);
+  const { checking } = useRoleGuard(['Admin']);
   const demo = isDemoMode();
 
   useEffect(() => { loadReports(); }, []);
+
+  if (checking) return <div className="flex h-[60vh] items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div></div>;
 
   async function loadReports() {
     if (demo) {

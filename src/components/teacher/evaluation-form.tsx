@@ -6,6 +6,7 @@ import { isDemoMode, loadDemoClasses, loadDemoSessions, loadDemoEnrollments, loa
 import type { DemoClass, DemoSession, DemoEnrollment, DemoEvaluation } from '@/data/admin-store';
 import { isSessionLocked } from '@/utils/scoring';
 import { ClipboardCheck, Lock, Send, AlertCircle, ChevronDown } from 'lucide-react';
+import { useRoleGuard } from '@/lib/auth-guard';
 
 const SCORE_OPTIONS = [
   { value: 1, label: '1 - Kém' },
@@ -33,9 +34,12 @@ export function EvaluationForm() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const { checking } = useRoleGuard(['TeacherTA', 'Admin']);
   const [locked, setLocked] = useState(false);
   const [success, setSuccess] = useState('');
   const demo = isDemoMode();
+
+  if (checking) return null;
 
   const [form, setForm] = useState({
     student_id: '', class_session_id: '',

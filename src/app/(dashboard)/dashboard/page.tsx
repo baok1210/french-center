@@ -153,10 +153,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Get role from demo or supabase
-    const demoEmail = localStorage.getItem('demo_user');
-    if (demoEmail === 'teacher@demo.com') { setRole('TeacherTA'); return; }
-    if (demoEmail === 'admin@demo.com') { setRole('Admin'); return; }
-    if (demoEmail === 'student@demo.com') { setRole('Student'); return; }
+    const demoRaw = localStorage.getItem('demo_user');
+    if (demoRaw) {
+      try {
+        const parsed = JSON.parse(demoRaw);
+        if (parsed?.role) { setRole(parsed.role); return; }
+      } catch { /* fall through */ }
+      const legacyMap: Record<string, string> = { 'admin@demo.com': 'Admin', 'teacher@demo.com': 'TeacherTA' };
+      if (legacyMap[demoRaw]) { setRole(legacyMap[demoRaw]); return; }
+      if (demoRaw === 'student@demo.com') { setRole('Student'); return; }
+    }
 
     const supabase = createClient();
     supabase.auth.getSession().then((result: any) => {

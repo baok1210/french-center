@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client';
 import { isDemoMode, loadDemoTeachers, saveDemoTeacher, deleteDemoTeacher } from '@/data/admin-store';
 import type { DemoTeacher } from '@/data/admin-store';
 import { Plus, GraduationCap, Edit3, Trash2, X, Save, AlertCircle, Search, Mail } from 'lucide-react';
+import { useRoleGuard } from '@/lib/auth-guard';
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
@@ -33,9 +34,12 @@ export default function AdminTeachersPage() {
     student_code: '',
     cefr_current: 'B2',
   });
+  const { checking } = useRoleGuard(['Admin']);
   const demo = isDemoMode();
 
   useEffect(() => { loadTeachers(); }, []);
+
+  if (checking) return <div className="flex h-[60vh] items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div></div>;
 
   async function loadTeachers() {
     if (demo) {

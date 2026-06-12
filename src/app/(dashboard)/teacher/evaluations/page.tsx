@@ -26,9 +26,6 @@ export default function TeacherEvaluationsPage() {
   const [error, setError] = useState('');
   const { checking } = useRoleGuard(['TeacherTA', 'Admin']);
   const demo = isDemoMode();
-
-  if (checking) return <div className="flex h-[60vh] items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div></div>;
-
   const [editForm, setEditForm] = useState({
     pronunciation: 3, fluency: 3, vocabulary_oral: 3,
     grammar_conjugation: 3, structure: 3, spelling: 3,
@@ -36,6 +33,8 @@ export default function TeacherEvaluationsPage() {
     attendance: 'present', engagement: 3, homework: 'on_time',
     notes: '',
   });
+
+  if (checking) return <div className="flex h-[60vh] items-center justify-center"><div className="text-sm text-muted-foreground animate-pulse">Đang tải...</div></div>;
 
   useEffect(() => { loadData(); }, []);
 

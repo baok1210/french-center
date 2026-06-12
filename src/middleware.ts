@@ -7,7 +7,7 @@ const AUTH_ROUTES = ['/login', '/signup'];
 const PROTECTED_ROUTES = [
   '/dashboard', '/workspace', '/wizard', '/knowledge',
   '/review', '/pronunciation', '/resources', '/ai-assistant', '/settings',
-  '/lessons', '/levels',
+  '/lessons', '/levels', '/chat', '/notifications',
 ];
 
 function getRole(request: NextRequest): string | null {
@@ -69,6 +69,17 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
     if (role !== 'TeacherTA' && role !== 'Admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Student routes — require Student role
+  if (cleanPath.startsWith('/student/')) {
+    if (!role) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    if (role !== 'Student') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     return NextResponse.next();

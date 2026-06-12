@@ -5,7 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, GraduationCap, ClipboardCheck, FileBarChart,
   Bot, BookOpen, LogOut, ChevronLeft, Settings, Users, Calendar,
-  UserPlus, Mic, Library, Wand2, Brain, Notebook,
+  UserPlus, Mic, Library, Wand2, Brain, Notebook, MessageSquare,
+  Bell, FileText, ListChecks, BookMarked, MapPin,
 } from 'lucide-react';
 import { useState } from 'react';
 import { ThemeToggle } from './theme-toggle';
@@ -24,6 +25,10 @@ const navItems: NavItem[] = [
   // Teaching
   { href: '/teacher/evaluate', label: 'Nhập điểm', icon: ClipboardCheck, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
   { href: '/teacher/evaluations', label: 'Lịch sử ĐG', icon: ClipboardCheck, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
+  { href: '/teacher/attendance', label: 'Điểm danh', icon: Calendar, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
+  { href: '/teacher/assignments', label: 'Bài tập', icon: ListChecks, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
+  { href: '/teacher/grade', label: 'Chấm điểm', icon: BookOpen, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
+  { href: '/teacher/documents', label: 'Giáo trình', icon: FileText, roles: ['TeacherTA', 'Admin'], group: 'teaching', groupLabel: 'Giảng dạy' },
   // Admin
   { href: '/admin/classes', label: 'Lớp học', icon: GraduationCap, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
   { href: '/admin/teachers', label: 'Giáo viên', icon: Users, roles: ['Admin'], group: 'admin', groupLabel: 'Quản lý' },
@@ -36,10 +41,17 @@ const navItems: NavItem[] = [
   { href: '/workspace', label: 'Thư viện', icon: Library, roles: ['Student', 'TeacherTA', 'Admin'], group: 'learning', groupLabel: 'Học tập' },
   { href: '/review', label: 'Ôn tập', icon: Brain, roles: ['Student', 'TeacherTA', 'Admin'], group: 'learning', groupLabel: 'Học tập' },
   { href: '/wizard', label: 'Lộ trình', icon: Wand2, roles: ['Student', 'TeacherTA', 'Admin'], group: 'learning', groupLabel: 'Học tập' },
+  // Student features
+  { href: '/student/schedule', label: 'Lịch học', icon: MapPin, roles: ['Student'], group: 'student', groupLabel: 'Học viên' },
+  { href: '/student/submit', label: 'Nộp bài', icon: Notebook, roles: ['Student'], group: 'student', groupLabel: 'Học viên' },
+  { href: '/student/vocab', label: 'Sổ tay', icon: BookMarked, roles: ['Student'], group: 'student', groupLabel: 'Học viên' },
+  { href: '/student/results', label: 'Kết quả', icon: FileBarChart, roles: ['Student'], group: 'student', groupLabel: 'Học viên' },
   // Tools
+  { href: '/chat', label: 'Chat', icon: MessageSquare, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
   { href: '/pronunciation', label: 'Phát âm', icon: Mic, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
   { href: '/resources', label: 'Tài nguyên', icon: Notebook, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
   { href: '/ai-assistant', label: 'Trợ lý AI', icon: Bot, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
+  { href: '/notifications', label: 'Thông báo', icon: Bell, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
   { href: '/settings', label: 'Cài đặt', icon: Settings, roles: ['Student', 'TeacherTA', 'Admin'], group: 'tools', groupLabel: 'Công cụ' },
 ];
 
